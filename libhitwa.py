@@ -21,6 +21,7 @@
 # SOFTWARE.
 
 __all__ = [
+    'get_msg_lang',
     'do_login',
     'do_logout',
 ]
