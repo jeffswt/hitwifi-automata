@@ -31,6 +31,79 @@ import re
 import urllib
 
 
+def get_msg_lang(msg, locale='en'):
+    langs = {'en', 'zh', 'jp'}
+    lang_list = {
+        'ALREADY_ONLINE': {
+            'en': 'The device is already connected to the Internet.',
+            'zh': '人家早就已经连上网了喵   ԅ(¯﹃¯ԅ)',
+            'jp': 'このデバイスはすでにインターネットに接続されています。',
+        },
+        'ALREADY_OFFLINE': {
+            'en': 'The device is already disconnected.',
+            'zh': '人家早就断网了喵   (ง •_•)ง',
+            'jp': 'このデバイスはすでにインターネットから切断されています。',
+        },
+        'NO_NETWORK': {
+            'en': 'The device is not properly connected to HIT campus '
+                  'network (or any).',
+            'zh': '人家根本就没有连上校园网的喵   ~(￣▽￣)~*',
+            'jp': 'このデバイスがキャンパスネットワークに適切に接続'
+                  'されていません。',
+        },
+        'MISSING_EPORTAL': {
+            'en': 'Cannot locate the ePortal address.',
+            'zh': '人家不知道怎么登录校园网的喵   ≧ ﹏ ≦',
+            'jp': 'イーポータルアドレスが見つかりません。',
+        },
+        'NO_REPONSE': {  # No Response (
+            'en': 'ePortal server did not response.',
+            'zh': '服务器菌不回复人家的喵   o(TヘTo)',
+            'jp': '認証サーバーが応答しませんでした。',
+        },
+        'EMPTY_USERNAME': {
+            'en': 'Username should not be empty.',
+            'zh': '好好把用户名给人家填上啊喵   (ノ｀Д)ノ',
+            'jp': 'ユーザー名は空にしないでください。',
+        },
+        'EMPTY_PASSWORD': {
+            'en': 'Password should not be empty.',
+            'zh': '好好把密码给人家填上啊喵   (σ｀д′)σ',
+            'jp': 'パスワードは空にしないでください。',
+        },
+        'INCORRECT_USERNAME': {
+            'en': 'The user does not exist.',
+            'zh': '这个用户根本根本就没有的喵   (lll￢ω￢)',
+            'jp': 'ユーザーが存在しません。',
+        },
+        'INCORRECT_PASSWORD': {
+            'en': 'The password is incorrect.',
+            'zh': '密码敲错了啊的喵   (⊙o⊙)？',
+            'jp': 'パスワードが間違っています。',
+        },
+        'LOGIN_SUCCESS': {
+            'en': 'Successfully connected to HIT campus network!',
+            'zh': '连上网了喵!   d=====(￣▽￣*)b',
+            'jp': 'ログインに成功しました！',
+        },
+        'LOGOUT_SUCCESS': {
+            'en': 'Successfully disconnected!',
+            'zh': '网咋就断了喵   (。_。)',
+            'jp': 'ログアウトしました！',
+        },
+        'LOGOUT_FAILED': {
+            'en': 'Failed to logout (what the ****)',
+            'zh': '没断开网 (smg)',
+            'jp': 'ログアウトに失敗しました (なに)',
+        },
+    }
+    if msg not in lang_list:
+        return msg
+    if locale not in langs:
+        locale = 'en'
+    return lang_list[msg][locale]
+
+
 def parse_url(url):
     _1, _2, _3, _4, _5, _6 = urllib.parse.urlparse(url)
     _5 = urllib.parse.parse_qs(_5, keep_blank_values=True)
@@ -68,15 +141,15 @@ def do_login(username, password):
         req = requests.get(urls['redirect'])
         req.encoding = 'utf-8'
     except Exception as err:
-        return False, 'no network'
+        return False, 'NO_NETWORK'
     if 'https://go.microsoft.com/fwlink/' in req.text:
-        return True, 'already connected to network'
+        return True, 'ALREADY_ONLINE'
     probable_urls = re.findall(r'[\'\"]([^\'\"]*?)[\'\"]', req.text)
     eportal_url = list(filter(lambda x: x.startswith(urls['auth-domain'] +
                                                      urls['auth-index']),
                               probable_urls))
     if len(eportal_url) == 0:
-        return False, 'eportal address not found'
+        return False, 'MISSING_EPORTAL'
     eportal_url = eportal_url[0]
     # generate login query
     post_query = {
@@ -110,27 +183,27 @@ def do_login(username, password):
                             headers=headers)
         req.encoding = 'utf-8'
     except Exception as err:
-        return False, 'no network'
+        return False, 'NO_NETWORK'
     if type(req.text) != dict:
         try:
             result = json.loads(req.text)
         except Exception as err:
-            return False, 'server did not respond'
+            return False, 'NO_REPONSE'
     else:
         result = req.text
     if result.get('result', 'fail') != 'success':
         msg = result.get('message', '')
         info_map = {
-            ('用户名不能为空', 'username may not be empty'),
-            ('用户不存在', 'nonexistent user'),
-            ('用户密码错误', 'invalid password'),
-            ('密码不能为空', 'password may not be empty'),
+            ('用户名不能为空', 'EMPTY_USERNAME'),
+            ('用户不存在', 'INCORRECT_USERNAME'),
+            ('用户密码错误', 'INCORRECT_PASSWORD'),
+            ('密码不能为空', 'EMPTY_PASSWORD'),
         }
         for _ in info_map:
             if msg.startswith(_[0]):
                 return False, _[1]
         return False, msg
-    return True, 'auth success'
+    return True, 'LOGIN_SUCCESS'
 
 
 def do_logout():
@@ -161,17 +234,17 @@ def do_logout():
                             headers=headers)
         req.encoding = 'utf-8'
     except Exception as err:
-        return False, 'no network'
+        return False, 'NO_NETWORK'
     if type(req.text) != dict:
         try:
             result = json.loads(req.text)
         except Exception as err:
-            return False, 'server did not respond'
+            return False, 'NO_REPONSE'
     else:
         result = req.text
     if (result.get('result', '') == 'fail' and
         result.get('message', '') == '用户已不在线'):
-        return True, 'already offline'
+        return True, 'ALREADY_OFFLINE'
     if result.get('result', 'fail') != 'success':
-        return False, result.get('message', 'logout failed')
-    return True, 'logout success'
+        return False, result.get('message', 'LOGOUT_FAILED')
+    return True, 'LOGOUT_SUCCESS'
