@@ -29,7 +29,9 @@ pip install -r requirements.txt
 
 ## 下载
 
-Releases: W.I.P.
+到 [Release](https://github.com/jeffswt/hitwifi-automata/releases/latest) 里面下载最新版本 `hitwa.exe`。
+
+配置用户名密码方式同上 ↑
 
 ## Todo
 
