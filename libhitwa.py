@@ -31,6 +31,8 @@ import requests
 import re
 import socket
 import urllib
+import platform
+import subprocess
 
 
 def get_msg_lang(msg, locale='en'):
@@ -281,3 +283,66 @@ def net_logout():
     if result.get('result', 'fail') != 'success':
         return False, result.get('message', 'LOGOUT_FAILED')
     return True, 'LOGOUT_SUCCESS'
+
+
+class NetworkConnectivityBuffer:
+    def __init__(self):
+        self.buffers = []
+        self.buffer_size = 3
+        return
+
+    def check_connectivity(self, timeout=1.0):
+        www_addr = ('www.baidu.com', 80)
+        cnet_addr = ('202.118.253.94', 8080)
+        result = {
+            'any-network': False,
+            'campus-network': False,
+            'internet': False,
+        }
+        # determine if a network is connected
+        try:
+            socket.create_connection(www_addr, timeout=timeout)
+            result['any-network'] = True
+        except OSError:
+            return result
+        # check if is under campus network
+        try:
+            socket.create_connection(cnet_addr, timeout=timeout)
+            result['campus-network'] = True
+        except OSError:
+            pass
+        # check if is connected to internet
+        if ping(www_addr[0], timeout=timeout):
+            result['internet'] = True
+        return result
+
+    def update_status(self):
+        res = self.check_connectivity(timeout=0.5)
+        res_hash = '%d,%d,%d' % (res['any-network'], res['campus-network'],
+                                 res['internet'])
+        res_map = {
+            '1,0,1': 'wan-connected',  # Wide Area Network
+            '1,1,0': 'can-disconnected',  # Campus Area Network
+            '1,1,1': 'can-connected',
+        }
+        res = res_map.get(res_hash, 'no-network')
+        self.buffers.append(res)
+        if len(self.buffers) > self.buffer_size:
+            self.buffers.pop(0)
+        return
+
+    def get_status(self):
+        if len(self.buffers) < self.buffer_size:
+            return 'detecting'
+        res = 0
+        ranking = {
+            'no-network': 0,
+            'wan-connected': 1,
+            'can-disconnected': 2,
+            'can-connected': 3,
+        }
+        inv_ranking = dict((ranking[i], i) for i in ranking)
+        for stat in self.buffers:
+            res = max(res, ranking[stat])
+        return inv_ranking[res]
+    pass
