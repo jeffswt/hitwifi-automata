@@ -29,10 +29,15 @@ __all__ = [
 import json
 import requests
 import re
+import socket
 import urllib
 
 
 def get_msg_lang(msg, locale='en'):
+    """ get_msg_lang(msg, locale='en'): Retrieve language string for codename
+    @param msg <- str: the codename
+    @param locale <- str: language to retrieve
+    @return msg -> str: translated string """
     langs = {'en', 'zh', 'jp'}
     lang_list = {
         'ALREADY_ONLINE': {
@@ -89,7 +94,7 @@ def get_msg_lang(msg, locale='en'):
         },
         'LOGOUT_SUCCESS': {
             'en': 'Successfully disconnected!',
-            'zh': '网咋就断了喵   (。_。)',
+            'zh': '网断了喵   (。_。)',
             'jp': 'ログアウトしました！',
         },
         'LOGOUT_FAILED': {
@@ -106,6 +111,9 @@ def get_msg_lang(msg, locale='en'):
 
 
 def parse_url(url):
+    """ parse_url(url): Parse URL according to urllib.parse
+    @param url <- str: the URL string
+    @return components -> dict(str: *): the URL components """
     _1, _2, _3, _4, _5, _6 = urllib.parse.urlparse(url)
     _5 = urllib.parse.parse_qs(_5, keep_blank_values=True)
     return {
@@ -119,13 +127,37 @@ def parse_url(url):
 
 
 def join_query(queries):
+    """ join_query(queries): Join urllib queries
+    @param queries <- dict(str: list(str)): queries parsed by
+           urllib.parse.parse_qs
+    @return qs -> str: the query string """
     return '&'.join('&'.join(urllib.parse.quote(i) + '=' +
                              urllib.parse.quote(j) for j in queries[i])
                     for i in queries)
 
 
-def do_login(username, password):
-    """ do_login(username, password): Login to HIT campus network
+def ping(host, timeout=1.0):
+    """ ping(host, timeout): Ping given host and return if accessible
+    @param host <- str: hostname
+    @param time <- float: timeout in seconds """
+    if platform.system().lower() == 'windows':
+        params = ['ping.exe', host, '-n', '1',
+                  '-w', str(int(timeout * 1000))]
+    else:
+        params = ['ping', host, '-c', '1',
+                  '-w', str(timeout)]
+    proc = subprocess.Popen(
+        args=params,
+        stdin=subprocess.PIPE,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+    ret = proc.wait(timeout=timeout)
+    return ret == 0
+
+
+def net_login(username, password):
+    """ net_login(username, password): Login to HIT campus network
     @param username <- str: the 10-digit username you would enter
     @param password <- str: the password you specified
     @return status -> bool: True if connected to network
@@ -207,8 +239,8 @@ def do_login(username, password):
     return True, 'LOGIN_SUCCESS'
 
 
-def do_logout():
-    """ do_logout(): Logout from HIT campus network
+def net_logout():
+    """ net_logout(): Logout from HIT campus network
     @return status -> bool: True if logged out from campus network
     @return message -> str: describes the reason related to status """
     urls = {
