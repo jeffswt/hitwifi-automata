@@ -108,6 +108,31 @@ def get_ui_lang(msg, locale='en'):
             'zh': '连接失败次数过多，已暂停自动连接。',
             'jp': '失敗した試行が多すぎて、自動接続を一時停止します。',
         },
+        'Settings.Title': {
+            'en': 'Settings',
+            'zh': '设置',
+            'jp': '設定',
+        },
+        'Settings.Locale': {
+            'en': 'Language',
+            'zh': '语言',
+            'jp': '言語',
+        },
+        'Settings.Username': {
+            'en': 'Username',
+            'zh': '用户名',
+            'jp': 'ユーザー名',
+        },
+        'Settings.Password': {
+            'en': 'Password',
+            'zh': '密码',
+            'jp': 'パスワード',
+        },
+        'Settings.OkButton': {
+            'en': 'Save Changes',
+            'zh': '保存设置',
+            'jp': '設定を保存する',
+        },
     }
     if msg not in lang_list:
         return msg
@@ -183,10 +208,119 @@ class HwaConfigManager:
     pass
 
 
+class HwaConfigFrame(wx.Frame):
+    def __init__(self, config, *args, **kwargs):
+        kwargs['style'] = (kwargs.get('style', 0) | wx.CAPTION |
+                           wx.CLIP_CHILDREN | wx.CLOSE_BOX | wx.STAY_ON_TOP |
+                           wx.SYSTEM_MENU)
+        wx.Frame.__init__(self, *args, **kwargs)
+        # data storage
+        self.config = config
+        self.lang_list = [
+            ('en', 'English'),
+            ('zh', '简体中文'),
+            ('jp', '日本語'),
+        ]
+        # create data elements
+        self.items = {}
+        self.SetSize((361, 213))
+        self.items['data-locale'] = wx.Choice(
+            self, wx.ID_ANY, choices=list(i[1] for i in self.lang_list))
+        # self.choice1.GetCurrentSelection()
+        self.items['data-username'] = wx.TextCtrl(self, wx.ID_ANY, '')
+        self.items['data-password'] = wx.TextCtrl(
+            self, wx.ID_ANY, '', style=wx.TE_PASSWORD)
+        self.items['button-ok'] = wx.Button(self, wx.ID_ANY, 'OK')
+        # set properties
+        self.SetTitle('Settings')
+        self.SetIcon(wx.Icon('icon.png'))
+        self.SetBackgroundColour(wx.SystemSettings.GetColour(
+                                 wx.SYS_COLOUR_3DFACE))
+        self.items['data-locale'].SetSelection(
+            dict((self.lang_list[i][0], i) for i in range(len(self.lang_list)))
+            [self.config['locale']])
+        self.items['button-ok'].SetMinSize((200, 26))
+        # set layout
+        self.items['vert-frame'] = wx.BoxSizer(wx.VERTICAL)
+        self.items['input-grid'] = wx.FlexGridSizer(3, 2, 0, 0)
+        self.items['text-locale'] = wx.StaticText(
+            self, wx.ID_ANY, 'Locale')
+        self.items['input-grid'].Add(self.items['text-locale'], 0, wx.ALL, 10)
+        self.items['input-grid'].Add(
+            self.items['data-locale'], 0, wx.ALL | wx.EXPAND, 5)
+        self.items['text-username'] = wx.StaticText(
+            self, wx.ID_ANY, 'Username')
+        self.items['input-grid'].Add(
+            self.items['text-username'], 0, wx.ALL, 10)
+        self.items['input-grid'].Add(
+            self.items['data-username'], 0, wx.ALL | wx.EXPAND, 5)
+        self.items['text-password'] = wx.StaticText(
+            self, wx.ID_ANY, 'Password')
+        self.items['input-grid'].Add(
+            self.items['text-password'], 0, wx.ALL, 10)
+        self.items['input-grid'].Add(
+            self.items['data-password'], 0, wx.ALL | wx.EXPAND, 5)
+        self.items['input-grid'].AddGrowableCol(1)
+        self.items['vert-frame'].Add(
+            self.items['input-grid'], 1, wx.EXPAND | wx.LEFT |
+            wx.RIGHT | wx.TOP, 16)
+        self.items['vert-frame'].Add((0, 0), 0, 0, 0)
+        self.items['vert-frame'].Add(
+            self.items['button-ok'], 0, wx.ALIGN_CENTER | wx.ALL, 12)
+        self.SetSizer(self.items['vert-frame'])
+        self.update_text()
+        # bind events
+        self.Bind(wx.EVT_CHOICE, self.eventh_choice, self.items['data-locale'])
+        self.Bind(wx.EVT_BUTTON, self.eventh_ok, self.items['button-ok'])
+        self.Bind(wx.EVT_CLOSE, self.eventh_close, self)
+        self.Layout()
+        return
+
+    def update_text(self):
+        locale = self.config['locale']
+        self.SetTitle(get_ui_lang('Settings.Title', locale=locale))
+        self.items['text-locale'].SetLabelText(get_ui_lang(
+            'Settings.Locale', locale=locale))
+        self.items['text-username'].SetLabelText(get_ui_lang(
+            'Settings.Username', locale=locale))
+        self.items['text-password'].SetLabelText(get_ui_lang(
+            'Settings.Password', locale=locale))
+        self.items['button-ok'].SetLabelText(get_ui_lang(
+            'Settings.OkButton', locale=locale))
+        self.Layout()
+        return
+
+    def eventh_choice(self, event):
+        self.config['locale'] = self.lang_list[
+            self.items['data-locale'].GetCurrentSelection()][0]
+        self.update_text()
+        return
+
+    def eventh_ok(self, event):
+        self.Close()
+        return
+    
+    def eventh_close(self, event):
+        self.config['username'] = self.items['data-username'].GetLineText(0)
+        self.config['password'] = self.items['data-password'].GetLineText(0)
+        print(self.config.data)
+        event.Skip()
+        return
+    pass
+
+
+def update_config_gui(config):
+    frame = HwaConfigFrame(config, None, wx.ID_ANY, '')
+    frame.Show()
+    return
+
+
 class HwaTrayIcon(wx.adv.TaskBarIcon):
     def __init__(self, config_mgr):
         wx.adv.TaskBarIcon.__init__(self)
         # Get menu item IDs
+        # Why use ID? because menu items change.
+        # And I don't like to bind things frequently.
         self.item_ids = {
             'net-status': wx.NewIdRef(),
             'daemon-status': wx.NewIdRef(),
