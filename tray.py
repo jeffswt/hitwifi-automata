@@ -269,6 +269,9 @@ class HwaConfigFrame(wx.Frame):
             self.items['button-ok'], 0, wx.ALIGN_CENTER | wx.ALL, 12)
         self.SetSizer(self.items['vert-frame'])
         self.update_text()
+        # set values
+        self.items['data-username'].SetValue(self.config['username'])
+        self.items['data-password'].SetValue(self.config['password'])
         # bind events
         self.Bind(wx.EVT_CHOICE, self.eventh_choice, self.items['data-locale'])
         self.Bind(wx.EVT_BUTTON, self.eventh_ok, self.items['button-ok'])
@@ -299,11 +302,11 @@ class HwaConfigFrame(wx.Frame):
     def eventh_ok(self, event):
         self.Close()
         return
-    
+
     def eventh_close(self, event):
         self.config['username'] = self.items['data-username'].GetLineText(0)
         self.config['password'] = self.items['data-password'].GetLineText(0)
-        print(self.config.data)
+        self.config.save()
         event.Skip()
         return
     pass
@@ -437,6 +440,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
         return
 
     def eventh_settings(self, event):
+        update_config_gui(self.config)
         return
 
     def eventh_exit(self, event):
@@ -552,7 +556,10 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
 
 class HwaTrayIconApp(wx.App):
     def OnInit(self):
-        HwaTrayIcon({'locale': 'zh', 'username': '---', 'password': '---'})
+        config = HwaConfigManager()
+        if not config.load():
+            update_config_gui(config)
+        tray = HwaTrayIcon(config)
         return True
 
 
