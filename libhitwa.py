@@ -9,8 +9,8 @@
 # copies of the Software, and to permit persons to whom the Software is
 # furnished to do so, subject to the following conditions:
 #
-# The above copyright notice and this permission notice shall be included in all
-# copies or substantial portions of the Software.
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
 #
 # THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
 # IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
@@ -20,12 +20,6 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-__all__ = [
-    'get_msg_lang',
-    'do_login',
-    'do_logout',
-]
-
 import json
 import requests
 import re
@@ -33,6 +27,13 @@ import socket
 import urllib
 import platform
 import subprocess
+
+__all__ = [
+    'get_msg_lang',
+    'net_login',
+    'net_logout',
+    'NetworkConnectivityBuffer',
+]
 
 
 def get_msg_lang(msg, locale='en'):
@@ -154,7 +155,10 @@ def ping(host, timeout=1.0):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    ret = proc.wait(timeout=timeout)
+    try:
+        ret = proc.wait(timeout=timeout)
+    except subprocess.TimeoutExpired:
+        return False
     return ret == 0
 
 
@@ -162,7 +166,7 @@ def net_login(username, password):
     """ net_login(username, password): Login to HIT campus network
     @param username <- str: the 10-digit username you would enter
     @param password <- str: the password you specified
-    @return status -> bool: True if connected to network
+    @return status -> bool: True if authenticated
     @return message -> str: describes the reason related to status """
     urls = {
         'redirect': 'http://www.msftconnecttest.com/redirect',
@@ -178,7 +182,7 @@ def net_login(username, password):
     except Exception as err:
         return False, 'NO_NETWORK'
     if 'https://go.microsoft.com/fwlink/' in req.text:
-        return True, 'ALREADY_ONLINE'
+        return False, 'ALREADY_ONLINE'
     probable_urls = re.findall(r'[\'\"]([^\'\"]*?)[\'\"]', req.text)
     eportal_url = list(filter(lambda x: x.startswith(urls['auth-domain'] +
                                                      urls['auth-index']),
@@ -243,7 +247,7 @@ def net_login(username, password):
 
 def net_logout():
     """ net_logout(): Logout from HIT campus network
-    @return status -> bool: True if logged out from campus network
+    @return status -> bool: True if successfully logged out
     @return message -> str: describes the reason related to status """
     urls = {
         'auth-ip': '202.118.253.94:8080',
@@ -278,8 +282,8 @@ def net_logout():
     else:
         result = req.text
     if (result.get('result', '') == 'fail' and
-        result.get('message', '') == '用户已不在线'):
-        return True, 'ALREADY_OFFLINE'
+            result.get('message', '') == '用户已不在线'):
+        return False, 'ALREADY_OFFLINE'
     if result.get('result', 'fail') != 'success':
         return False, result.get('message', 'LOGOUT_FAILED')
     return True, 'LOGOUT_SUCCESS'
@@ -336,6 +340,8 @@ class NetworkConnectivityBuffer:
             return 'detecting'
         res = 0
         ranking = {
+            'paused': -2,
+            'detecting': -1,
             'no-network': 0,
             'wan-connected': 1,
             'can-disconnected': 2,
@@ -345,4 +351,8 @@ class NetworkConnectivityBuffer:
         for stat in self.buffers:
             res = max(res, ranking[stat])
         return inv_ranking[res]
+
+    def clear_status(self):
+        self.buffers = []
+        return
     pass
