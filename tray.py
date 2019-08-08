@@ -186,9 +186,6 @@ class HwaConfigManager:
 class HwaTrayIcon(wx.adv.TaskBarIcon):
     def __init__(self, config_mgr):
         wx.adv.TaskBarIcon.__init__(self)
-        # Bind icon and title
-        self.SetIcon(wx.Icon('icon.png'),
-                     'HITWiFi: Automata')
         # Get menu item IDs
         self.item_ids = {
             'net-status': wx.NewIdRef(),
@@ -209,6 +206,10 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             'login-failed-attempts': 0,
         }
         self.config = config_mgr
+        # Bind icon and title
+        self.SetIcon(wx.Icon('icon.png'),
+                     get_ui_lang('General.Title',
+                     locale=self.config['locale']))
         # Bind Entries
         self.Bind(wx.EVT_MENU, self.eventh_net_status,
                   id=self.item_ids['net-status'])
@@ -236,12 +237,14 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
         if self.states['daemon-working']:
             send_notification('General.Title',
                               'Notification.DaemonStatus.Pause',
+                              locale=self.config['locale'],
                               flags=wx.ICON_INFORMATION)
             self.states['daemon-working'] = False
             self.states['net-status'] = 'paused'
         else:
             send_notification('General.Title',
                               'Notification.DaemonStatus.Resume',
+                              locale=self.config['locale'],
                               flags=wx.ICON_INFORMATION)
             self.states['daemon-working'] = True
             self.states['net-status'] = 'detecting'
@@ -260,12 +263,14 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
         if status:
             send_notification('General.Title', message,
                               trans=(True, False),
+                              locale=self.config['locale'],
                               flags=wx.ICON_INFORMATION)
             self.states['net-status'] = 'can-connected'
             self.states['login-failed-attempts'] = 0
         else:
             send_notification('General.Title', message,
                               trans=(True, False),
+                              locale=self.config['locale'],
                               flags=wx.ICON_EXCLAMATION)
             self.states['login-failed-attempts'] += 1
         self.states['logging-in'] = False
@@ -278,16 +283,18 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             return
         self.states['logging-out'] = True
         self.states['daemon-working'] = False
+        self.states['net-status'] = 'paused'
         status, message = libhitwa.net_logout()
         message = libhitwa.get_msg_lang(message, locale=self.config['locale'])
         if status:
             send_notification('General.Title', message,
                               trans=(True, False),
+                              locale=self.config['locale'],
                               flags=wx.ICON_INFORMATION)
-            self.states['net-status'] = 'can-disconnected'
         else:
             send_notification('General.Title', message,
                               trans=(True, False),
+                              locale=self.config['locale'],
                               flags=wx.ICON_EXCLAMATION)
         self.states['logging-out'] = False
         return
@@ -301,6 +308,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
     def eventh_exit(self, event):
         self.states['terminate-all'] = True
         self.RemoveIcon()
+        self.states['daemon-thread'].join()
         wx.Exit()
         return
 
@@ -313,35 +321,42 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
                      'wan-connected': 'MenuItem.NetStatus.WanConnected',
                      'can-disconnected': 'MenuItem.NetStatus.CanDisconnected',
                      'can-connected': 'MenuItem.NetStatus.CanConnected'}
-                    [self.states['net-status']]))
+                    [self.states['net-status']],
+                    locale=self.config['locale']))
         menu.AppendSeparator()
         menu.Append(self.item_ids['daemon-status'], get_ui_lang(
                     'MenuItem.DaemonStatus.Working' if
                     self.states['daemon-working'] else
-                    'MenuItem.DaemonStatus.Paused'))
+                    'MenuItem.DaemonStatus.Paused',
+                    locale=self.config['locale']))
         if self.states['logging-in'] or self.states['logging-out']:
             menu.Append(self.item_ids['connect-status'], get_ui_lang(
                         'MenuItem.LoggingIn' if
                         self.states['logging-in'] else
-                        'MenuItem.LoggingOut'))
+                        'MenuItem.LoggingOut',
+                        locale=self.config['locale']))
         else:
             if self.states['net-status'] == 'can-disconnected':
                 menu.Append(self.item_ids['login'], get_ui_lang(
-                            'MenuItem.Login'))
+                            'MenuItem.Login',
+                            locale=self.config['locale']))
             if self.states['net-status'] == 'can-connected':
                 menu.Append(self.item_ids['logout'], get_ui_lang(
-                            'MenuItem.Logout'))
+                            'MenuItem.Logout',
+                            locale=self.config['locale']))
         menu.Append(self.item_ids['settings'], get_ui_lang(
-                    'MenuItem.Settings'))
+                    'MenuItem.Settings',
+                    locale=self.config['locale']))
         menu.Append(self.item_ids['exit'], get_ui_lang(
-                    'MenuItem.Exit'))
+                    'MenuItem.Exit',
+                    locale=self.config['locale']))
         return menu
 
     def start_daemon(self):
         def daemon(self):
             timestamp = time.time()
             delay = 3
-            fail_delay = 10
+            connect_cooldown = 10
             worker = libhitwa.NetworkConnectivityBuffer()
             while True:
                 # if program stopped
@@ -370,6 +385,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
                                 message, locale=self.config['locale'])
                         send_notification('General.Title', message,
                                           trans=(True, False),
+                                          locale=self.config['locale'],
                                           flags=wx.ICON_INFORMATION)
                         self.states['net-status'] = 'can-connected'
                         self.states['login-failed-attempts'] = 0
@@ -382,10 +398,12 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
                             send_notification(
                                 'General.Title',
                                 'Notification.DaemonStatus.TooManyFailures',
+                                locale=self.config['locale'],
                                 flags=wx.ICON_EXCLAMATION)
+                            self.states['net-status'] = 'paused'
                             self.states['daemon-working'] = False
                         self.states['logging-in'] = False
-                        time.sleep(fail_delay)
+                    time.sleep(connect_cooldown)
                 # sleep and update timestamp
                 ntimestamp = time.time()
                 time.sleep(max(0.5, delay - (ntimestamp - timestamp)))
