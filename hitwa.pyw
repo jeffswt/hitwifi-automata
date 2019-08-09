@@ -141,16 +141,18 @@ def get_ui_lang(msg, locale='en'):
     return lang_list[msg][locale]
 
 
-def send_notification(title, message, *args, locale='en',
-                      trans=(True, True), **kwargs):
+def send_notification(title, message, *args, locale='en', trans=(True, True),
+                      flags=wx.ICON_INFORMATION, icon=None, **kwargs):
     if trans[0]:
         title = get_ui_lang(title, locale=locale)
     if trans[1]:
         message = get_ui_lang(message, locale=locale)
-    nm = wx.adv.NotificationMessage(title, message, *args, **kwargs)
-    ic = wx.Icon('icon.png')
-    # wx.adv.NotificationMessage.SetIcon(wx.Icon('icon.png'))
-    nm.Show()
+    if platform.system().lower() == 'windows' and icon is not None:
+        icon.ShowBalloon(title, message, flags=flags)
+    else:
+        nm = wx.adv.NotificationMessage(
+            title, message, *args, flags=flags, **kwargs)
+        nm.Show()
     return
 
 
@@ -386,6 +388,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             send_notification('General.Title',
                               'Notification.DaemonStatus.Pause',
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_INFORMATION)
             self.states['daemon-working'] = False
             self.states['net-status'] = 'paused'
@@ -393,6 +396,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             send_notification('General.Title',
                               'Notification.DaemonStatus.Resume',
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_INFORMATION)
             self.states['daemon-working'] = True
             self.states['net-status'] = 'detecting'
@@ -413,6 +417,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             send_notification('General.Title', message,
                               trans=(True, False),
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_INFORMATION)
             self.states['net-status'] = 'can-connected'
             self.states['login-failed-attempts'] = 0
@@ -420,6 +425,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             send_notification('General.Title', message,
                               trans=(True, False),
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_EXCLAMATION)
             self.states['net-status'] = 'can-disconnected'
             self.states['login-failed-attempts'] += 1
@@ -441,11 +447,13 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
             send_notification('General.Title', message,
                               trans=(True, False),
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_INFORMATION)
         else:
             send_notification('General.Title', message,
                               trans=(True, False),
                               locale=self.config['locale'],
+                              icon=self,
                               flags=wx.ICON_EXCLAMATION)
         self.states['connectivity-worker'].clear_status()
         self.states['logging-out'] = False
@@ -548,6 +556,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
                         send_notification('General.Title', message,
                                           trans=(True, False),
                                           locale=self.config['locale'],
+                                          icon=self,
                                           flags=wx.ICON_INFORMATION)
                     # update states
                     if status:
@@ -562,6 +571,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
                                 'General.Title',
                                 'Notification.DaemonStatus.TooManyFailures',
                                 locale=self.config['locale'],
+                                icon=self,
                                 flags=wx.ICON_EXCLAMATION)
                             self.states['net-status'] = 'paused'
                             self.states['daemon-working'] = False
