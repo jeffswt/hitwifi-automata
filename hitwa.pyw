@@ -1,3 +1,24 @@
+# MIT License
+#
+# Copyright (c) 2019 Geoffrey Tang
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
 import json
 import platform
@@ -9,6 +30,7 @@ import wx
 import wx.adv
 
 import libhitwa
+import hwaicon
 
 
 def get_ui_lang(msg, locale='en'):
@@ -244,7 +266,7 @@ class HwaConfigFrame(wx.Frame):
         self.items['button-ok'] = wx.Button(self, wx.ID_ANY, 'OK')
         # set properties
         self.SetTitle('Settings')
-        self.SetIcon(wx.Icon('icon.png'))
+        self.SetIcon(hwaicon.get_icon())
         self.SetBackgroundColour(wx.SystemSettings.GetColour(
                                  wx.SYS_COLOUR_3DFACE))
         self.items['data-locale'].SetSelection(
@@ -357,7 +379,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
         }
         self.config = config_mgr
         # Bind icon and title
-        self.SetIcon(wx.Icon('icon.png'),
+        self.SetIcon(hwaicon.get_icon(),
                      get_ui_lang('General.Title',
                      locale=self.config['locale']))
         # Bind Entries
@@ -466,11 +488,13 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
     def eventh_settings(self, event):
         prev_state = self.states['daemon-working']
         self.states['daemon-working'] = False
+
         def callback(self, prev_state):
             self.states['connectivity-worker'].clear_status()
             self.states['login-failed-attempts'] = 0
             self.states['daemon-working'] = prev_state
             return
+
         update_config_gui(self.config, callback, [self, prev_state])
         return
 
