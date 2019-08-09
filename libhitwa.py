@@ -50,64 +50,64 @@ def get_msg_lang(msg, locale='en'):
     lang_list = {
         'ALREADY_ONLINE': {
             'en': 'The device is already connected to the Internet.',
-            'zh': '人家早就已经连上网了喵   ԅ(¯﹃¯ԅ)',
+            'zh': '设备已连接到互联网。',
             'jp': 'このデバイスはすでにインターネットに接続されています。',
         },
         'ALREADY_OFFLINE': {
             'en': 'The device is already disconnected.',
-            'zh': '人家早就断网了喵   (ง •_•)ง',
+            'zh': '用户已登出校园网。',
             'jp': 'このデバイスはすでにインターネットから切断されています。',
         },
         'NO_NETWORK': {
             'en': 'The device is not properly connected to HIT campus '
                   'network (or any).',
-            'zh': '人家根本就没有连上校园网的喵   ~(￣▽￣)~*',
+            'zh': '用户不处于校园网环境中。',
             'jp': 'このデバイスがキャンパスネットワークに適切に接続'
                   'されていません。',
         },
         'MISSING_EPORTAL': {
             'en': 'Cannot locate the ePortal address.',
-            'zh': '人家不知道怎么登录校园网的喵   ≧ ﹏ ≦',
+            'zh': '无法获取认证服务器地址。',
             'jp': 'イーポータルアドレスが見つかりません。',
         },
         'NO_REPONSE': {  # No Response (
             'en': 'ePortal server did not response.',
-            'zh': '服务器菌不回复人家的喵   o(TヘTo)',
+            'zh': '认证服务器未应答。',
             'jp': '認証サーバーが応答しませんでした。',
         },
         'EMPTY_USERNAME': {
             'en': 'Username should not be empty.',
-            'zh': '好好把用户名给人家填上啊喵   (ノ｀Д)ノ',
+            'zh': '用户名不得为空。',
             'jp': 'ユーザー名は空にしないでください。',
         },
         'EMPTY_PASSWORD': {
             'en': 'Password should not be empty.',
-            'zh': '好好把密码给人家填上啊喵   (σ｀д′)σ',
+            'zh': '密码不得为空。',
             'jp': 'パスワードは空にしないでください。',
         },
         'INCORRECT_USERNAME': {
             'en': 'The user does not exist.',
-            'zh': '这个用户根本根本就没有的喵   (lll￢ω￢)',
+            'zh': '用户名不存在。',
             'jp': 'ユーザーが存在しません。',
         },
         'INCORRECT_PASSWORD': {
             'en': 'The password is incorrect.',
-            'zh': '密码敲错了啊的喵   (⊙o⊙)？',
+            'zh': '密码输入错误。',
             'jp': 'パスワードが間違っています。',
         },
         'LOGIN_SUCCESS': {
             'en': 'Successfully connected to HIT campus network!',
-            'zh': '连上网了喵!   d=====(￣▽￣*)b',
+            'zh': '成功连接到校园网！',
             'jp': 'ログインに成功しました！',
         },
         'LOGOUT_SUCCESS': {
             'en': 'Successfully disconnected!',
-            'zh': '网断了喵   (。_。)',
+            'zh': '已登出校园网。',
             'jp': 'ログアウトしました！',
         },
         'LOGOUT_FAILED': {
             'en': 'Failed to logout (what the ****)',
-            'zh': '没断开网 (smg)',
+            'zh': '登出失败 (smg)',
             'jp': 'ログアウトに失敗しました (なに)',
         },
     }
