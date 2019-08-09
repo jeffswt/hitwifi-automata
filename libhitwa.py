@@ -154,11 +154,14 @@ def ping(host, timeout=1.0):
     else:
         params = ['ping', host, '-c', '1',
                   '-w', str(timeout)]
+    si = subprocess.STARTUPINFO()
+    si.dwFlags |= subprocess.STARTF_USESHOWWINDOW
     proc = subprocess.Popen(
         args=params,
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        startupinfo=si
     )
     try:
         ret = proc.wait(timeout=timeout)
