@@ -209,7 +209,7 @@ def net_login(username, password):
     """ net_login(username, password): Login to HIT campus network
     @param username <- str: the 10-digit username you would enter
     @param password <- str: the password you specified
-    @return status -> bool: True if authenticated
+    @return status -> bool: True if connected to network
     @return message -> str: describes the reason related to status """
     urls = {
         'redirect': 'http://www.msftconnecttest.com/redirect',
@@ -225,7 +225,7 @@ def net_login(username, password):
     except Exception as err:
         return False, 'NO_NETWORK'
     if 'https://go.microsoft.com/fwlink/' in req.text:
-        return False, 'ALREADY_ONLINE'
+        return True, 'ALREADY_ONLINE'
     probable_urls = re.findall(r'[\'\"]([^\'\"]*?)[\'\"]', req.text)
     eportal_url = list(filter(lambda x: x.startswith(urls['auth-domain'] +
                                                      urls['auth-index']),
@@ -290,7 +290,7 @@ def net_login(username, password):
 
 def net_logout():
     """ net_logout(): Logout from HIT campus network
-    @return status -> bool: True if successfully logged out
+    @return status -> bool: True if disconnected from Internet
     @return message -> str: describes the reason related to status """
     urls = {
         'auth-ip': '202.118.253.94:8080',
@@ -316,7 +316,7 @@ def net_logout():
                             headers=headers)
         req.encoding = 'utf-8'
     except Exception as err:
-        return False, 'NO_NETWORK'
+        return True, 'NO_NETWORK'
     if type(req.text) != dict:
         try:
             result = json.loads(req.text)
@@ -326,7 +326,7 @@ def net_logout():
         result = req.text
     if (result.get('result', '') == 'fail' and
             result.get('message', '') == '用户已不在线'):
-        return False, 'ALREADY_OFFLINE'
+        return True, 'ALREADY_OFFLINE'
     if result.get('result', 'fail') != 'success':
         return False, result.get('message', 'LOGOUT_FAILED')
     return True, 'LOGOUT_SUCCESS'
