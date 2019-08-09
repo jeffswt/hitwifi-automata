@@ -1,12 +1,12 @@
 
-import wx
-import wx.adv
-import time
-import socket
+import json
 import platform
+import socket
 import subprocess
 import threading
-import json
+import time
+import wx
+import wx.adv
 
 import libhitwa
 
@@ -187,7 +187,9 @@ class HwaConfigManager:
             obj = json.loads(content)
             ndata = {}
             for i in self.default_data:
-                ndata[i] = content[i]
+                ndata[i] = obj[i]
+            ndata['password'] = libhitwa.transcript_data(
+                ndata['password'], encrypt=False)
             self.data = ndata
         except Exception:
             self.data = {}
@@ -198,7 +200,12 @@ class HwaConfigManager:
 
     def save(self):
         try:
-            content = json.dumps(self.data, indent=4)
+            ndata = {}
+            for i in self.default_data:
+                ndata[i] = self.data[i]
+            ndata['password'] = libhitwa.transcript_data(
+                ndata['password'], encrypt=True)
+            content = json.dumps(ndata, indent=4)
             fhandle = open(self.filename, 'w', encoding='utf-8')
             fhandle.write(content)
             fhandle.close()
@@ -441,6 +448,7 @@ class HwaTrayIcon(wx.adv.TaskBarIcon):
 
     def eventh_settings(self, event):
         update_config_gui(self.config)
+        self.states['login-failed-attempts'] = 0
         return
 
     def eventh_exit(self, event):

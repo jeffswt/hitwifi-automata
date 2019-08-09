@@ -20,16 +20,21 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+import base64
+import cryptography.hazmat.primitives.ciphers
+import cryptography.hazmat.backends
 import json
+import os
+import platform
 import requests
 import re
 import socket
-import urllib
-import platform
 import subprocess
+import urllib
 
 __all__ = [
     'get_msg_lang',
+    'transcript_data',
     'net_login',
     'net_logout',
     'NetworkConnectivityBuffer',
@@ -160,6 +165,44 @@ def ping(host, timeout=1.0):
     except subprocess.TimeoutExpired:
         return False
     return ret == 0
+
+
+def transcript_data(data, encrypt=True):
+    if encrypt:
+        backend = cryptography.hazmat.backends.default_backend()
+        key = os.urandom(32)  # key
+        iv = os.urandom(16)  # initialization vector
+        # Generate encrypted message
+        cipher = cryptography.hazmat.primitives.ciphers.Cipher(
+            cryptography.hazmat.primitives.ciphers.algorithms.AES(key),
+            cryptography.hazmat.primitives.ciphers.modes.CBC(iv),
+            backend=backend)
+        encryptor = cipher.encryptor()
+        data = data.encode('utf-8')
+        padded_data = data + b'\x00' * (len(data) // 16 * 16 + 16 - len(data))
+        message = encryptor.update(padded_data) + encryptor.finalize()
+        # pack into data
+        blob = key + iv + (str(len(data)) + ';').encode('utf-8') + message
+        return base64.b64encode(blob).decode('utf-8')
+    else:
+        blob = base64.b64decode(data.encode('utf-8'))
+        # unpack values
+        key = blob[:32]
+        blob = blob[32:]
+        iv = blob[:16]
+        blob = blob[16:]
+        dsize = blob.split(b';')[0]
+        message = blob[(len(dsize) + 1):]
+        # retrieve message
+        backend = cryptography.hazmat.backends.default_backend()
+        cipher = cryptography.hazmat.primitives.ciphers.Cipher(
+            cryptography.hazmat.primitives.ciphers.algorithms.AES(key),
+            cryptography.hazmat.primitives.ciphers.modes.CBC(iv),
+            backend=backend)
+        decryptor = cipher.decryptor()
+        text = decryptor.update(message) + decryptor.finalize()
+        return text[:int(dsize.decode('utf-8'))].decode('utf-8')
+    return
 
 
 def net_login(username, password):
